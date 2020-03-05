@@ -70,13 +70,15 @@ createPackage() {
 	fi
 
 	# GET DETAILS FOR PACKAGE
+	prompt "Author name : "; author=`readInput`
 	prompt "Package name : "; name=`readInput`
 	prompt "Description : "; description=`readInput`
 	prompt "Output Filename : "; fname=`readInput`
 	yn "Is this a library? "; isLibrary=$? 
 
+	prompt "NPM Username : "; npmName=`readInput`
 	if [ "$isLibrary" -eq "1" ]; then
-		nameToUse="@kipprice\/$name"
+		nameToUse="@$npmName\/$name"
 	else
 		nameToUse=$name
 	fi
@@ -87,6 +89,7 @@ createPackage() {
 		-e "s/\${name}/$nameToUse/" \
 		-e "s/\${description}/$description/" \
 		-e "s/\${fname}/$fname/" \
+		-e "s/\${author}/$author" \
 		$DIR/package.json.template \
 		> package.json
 }

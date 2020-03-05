@@ -3,7 +3,7 @@
     "version": "1.0.0",
     "description": "${description}",
     "license": "MIT",
-    "author": "Kip Price",
+    "author": "${author}",
     "test": "jest",
 
     "main": "compiled_js/${fname}",
