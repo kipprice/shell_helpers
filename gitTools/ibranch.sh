@@ -1,5 +1,11 @@
 #!/bin/sh
 
+# This adds an interactive version of the view rendered by the 
+# git branch -l command. You can navigate to an existing branch via the
+# arrow keys + return, or you can create a new branch from the latest
+# version of the master or develop branch. Currently only handles 
+# showing local versions
+
 clear
 
 # declare the globals used by this script
@@ -13,14 +19,17 @@ prompt() { printf "\n$1 "; }
 readInput() { read -e in; echo $in; }
 createNewPrompt() { echo "+new from $rootName"; }
 
-# shamelessly stolen from Alexander K in this SO post:
+# Menu taken from Alexander K in this SE post:
 # https://unix.stackexchange.com/questions/146570/arrow-key-enter-menu
 # 
 # Renders a text based list of options that can be selected by the
 # user using up, down and enter keys and returns the chosen option.
 #
-#   Arguments   : list of options, maximum of 256
-#                 "opt1" "opt2" ...
+#   Arguments   : 1) index to start selected
+#                 2) name of the currently checked out branch      
+#                 3) list of options, maximum of 256
+#                    "opt1" "opt2" ...
+#
 #   Return value: selected index (0 for opt1, 1 for opt2 ...)
 
 select_option() {
@@ -69,7 +78,6 @@ select_option() {
             if [ "$opt" = "$branchName" ]; then
                 opt="\e[32m$opt\e[0m"
 
-            # kip: add teal highlighting to new option
             elif [ "$opt" = "$(createNewPrompt)" ]; then
                 opt="\e[36m$opt\e[0m"
             fi
@@ -108,7 +116,6 @@ get_branches() {
     # build the list of branches
     git branch -l --no-color > $PWD/branches.txt
 
-    # track the most common root branches so we can add a new option
     local hasMaster=0
     local hasDevelop=0
 
@@ -142,8 +149,8 @@ get_branches() {
     done < $PWD/branches.txt
 
 
-    # additionally add a "new branch" option from the appropriate
-    # master development branch (usually master or develop)
+    # additionally add a "new branch" option
+    
     if [ $hasDevelop -eq 1 ]; then
         rootName="develop"
         options+=( "$(createNewPrompt)" )
@@ -179,7 +186,7 @@ checkout() {
     if [ "$value" = "$currentBranch" ]; then
         echo "already on branch $currentBranch"
 
-    # allow creating a new branch with the most up to date version of master
+    # allow creating a new branch
     elif [ "$value" = "$(createNewPrompt)" ]; then
         prompt "Branch name : "; bname=`readInput`
         git co $rootName
