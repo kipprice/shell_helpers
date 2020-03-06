@@ -5,7 +5,13 @@ clear
 # declare the globals used by this script
 currentBranch=""
 currentIdx=-1
+rootName=""
 declare -a options=()
+
+# helpers to show & read info from the user
+prompt() { printf "\n$1 "; }
+readInput() { read -e in; echo $in; }
+createNewPrompt() { echo "+new from $rootName"; }
 
 # shamelessly stolen from Alexander K in this SO post:
 # https://unix.stackexchange.com/questions/146570/arrow-key-enter-menu
@@ -17,7 +23,7 @@ declare -a options=()
 #                 "opt1" "opt2" ...
 #   Return value: selected index (0 for opt1, 1 for opt2 ...)
 
-function select_option {
+select_option() {
 
     # load in the known parameters before using the rest as an implicit list
     local selected=$1
@@ -60,8 +66,11 @@ function select_option {
             cursor_to $(($startrow + $idx))
 
             # kip: add green highlighting to current branch
-            if [ $opt = $branchName ]; then
+            if [ "$opt" = "$branchName" ]; then
                 opt="\e[32m$opt\e[0m"
+
+            elif [ "$opt" = "$(createNewPrompt)" ]; then
+                opt="\e[36m$opt\e[0m"
             fi
 
             # hilite if this is the selected line, regular formatting otherwise
@@ -93,10 +102,13 @@ function select_option {
 
 # list all of the branches available in this directory and parse them
 # into the array expected by the menu display code
-function get_branches {
+get_branches() {
 
     # build the list of branches
     git branch -l --no-color > $PWD/branches.txt
+
+    local hasMaster=0
+    local hasDevelop=0
 
     # loop through each branch to build the array
     # this is written with the weird stdin + stdout because
@@ -116,15 +128,33 @@ function get_branches {
             options+=( $line )
         fi
 
+        # track what the root node is for branch creation
+        if [ $line = "master" ]; then 
+            hasMaster=1
+        elif [ $line = "develop" ]; then
+            hasDevelop=1
+        fi
+
         #gross
         ((cnt=cnt+1))
     done < $PWD/branches.txt
+
+
+    # additionally add a "new branch" option
+    
+    if [ $hasDevelop -eq 1 ]; then
+        rootName="develop"
+        options+=( "$(createNewPrompt)" )
+    elif [  $hasMaster -eq 1 ]; then
+        rootName="master"
+        options+=( "$(createNewPrompt)" )
+    fi
 
     rm $PWD/branches.txt
 }
 
 # show the menu to the user of all of the checked out branches
-function render_menu {
+render_menu() {
     echo "Select the branch you want to switch to:"
     echo
 
@@ -133,15 +163,28 @@ function render_menu {
     return $choice
 }
 
+
+
 # actually check out the selected branch or show an error if its
 # already checked out
-function checkout {
+checkout() {
     choice=$1
     value=${options[$choice]}
 
     clear
-    if [ $value = $currentBranch ]; then
+
+    # don't switch to the current branch
+    if [ "$value" = "$currentBranch" ]; then
         echo "already on branch $currentBranch"
+
+    # allow creating a new branch
+    elif [ "$value" = "$(createNewPrompt)" ]; then
+        prompt "Branch name : "; bname=`readInput`
+        git co $rootName
+        git pull
+        clear
+        git co -b $bname
+
     else
         git co $value
     fi
@@ -155,5 +198,3 @@ function main {
 }
 
 main
-
-
