@@ -1,10 +1,12 @@
 branch_name=""
 current_upstream=""
 
+# get the current branch name
 get_branch_name() {
     branch_name=$(git symbolic-ref HEAD | cut -d/ -f3-)
 }
 
+# find out if there is already an upstream
 get_current_upstream() {
     str=$(git status -sb)
 
@@ -18,21 +20,25 @@ get_current_upstream() {
 
     IFS=' ' # reset to spaces
     current_upstream=${pieces[1]}
-    echo $current_upstream
 }
 
-# get the current branch name
+
 main() {
     get_branch_name
     get_current_upstream
 
     # run the appropriate push command
-    if [[ ! -z current_upstream ]]; then
+    if [[ ! -z $current_upstream ]]; then
         git pull
         git push
+        clear
+        echo "Pushed to $current_upstream"
     else
-        git push --set-upstream=$branch_name
+        git push --set-upstream origin $branch_name
+        clear
+        echo "Pushed to origin/$branch_name"
     fi
+    
 }
 
 main
