@@ -170,6 +170,7 @@ get_branches() {
     rm $PWD/branches.txt
 }
 
+# make sure we are showing the right prompt for the mode
 render_prompt() {
     case "${mode}" in
         c) echo "Select the branch you want to switch to" ;;
@@ -189,17 +190,19 @@ render_menu() {
     return $choice
 }
 
-branch() {
+# handle branching off of an existing branch
+new_branch() {
     root=$1
 
     prompt "Branch name : "; bname=`readInput`
 
-    git co $root
+    git co $root --quiet
     git pull
     clear
     git co -b $bname
 }
 
+# handle checking out a particular branch
 checkout() {
     value=$1
     if [ "$value" = "$currentBranch" ]; then
@@ -207,7 +210,7 @@ checkout() {
 
     # allow creating a new branch
     elif [ "$value" = "$(createNewPrompt)" ]; then
-        branch $rootName
+        new_branch $rootName
 
     else
         git co $value
@@ -215,6 +218,7 @@ checkout() {
     fi
 }
 
+# delete the specified branch (while allowing the user to cancel the action)
 delete() {
     bname=$1
 
@@ -223,12 +227,13 @@ delete() {
         return
     fi
 
-    prompt "Are you sure you want to delete this branch? (Y/N)"; resp=`readInput`
+    prompt "Are you sure you want to delete $bname? (Y/N)"; resp=`readInput`
     if [ $resp = "Y" ] || [ $resp = "y" ]; then
         git branch -d $bname
     fi
 }
 
+# pull in updates from the specified branch, then recheckout the current branch
 pull() {
     bname=$1
 
@@ -262,11 +267,12 @@ execute() {
     case "${mode}" in
         c) checkout $value ;;
         d) delete $value ;;
-        n) branch $value ;;
+        n) new_branch $value ;;
         p) pull $value ;;
     esac
 }
 
+# render the help details if the user requests it
 print_help() {
     BOLD_ON="\033[1m"
     BOLD_OFF="\033[0m"
@@ -277,6 +283,8 @@ print_help() {
     echo "This runs an interactive version of the git branch list command. It supports"
     echo "rendering all of the current local branches and running specific commands"
     echo "against it."
+    echo
+    echo "Run this as sh ./ibranch.sh "
     echo
     echo "The different flags that are supported are:"
     echo
@@ -292,6 +300,7 @@ print_help() {
     echo
 }
 
+# parse flags to determine what mode this will run in
 get_mode() {
     while test $# -gt 0; do
         case "$1" in
