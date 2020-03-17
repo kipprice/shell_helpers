@@ -12,6 +12,8 @@ clear
 currentBranch=""
 currentIdx=-1
 rootName=""
+mode="c"
+escape=false
 declare -a options=()
 
 # helpers to show & read info from the user
@@ -51,7 +53,10 @@ select_option() {
     key_input()        { read -s -n3 key 2>/dev/null >&2
                          if [[ $key = $ESC[A ]]; then echo up;    fi
                          if [[ $key = $ESC[B ]]; then echo down;  fi
-                         if [[ $key = ""     ]]; then echo enter; fi; }
+                         if [[ $key = $ESC[D ]]; then echo escape; fi
+                         if [[ $key = ""     ]]; then echo enter; fi;
+                        }
+                         
 
     # initially print empty new lines (scroll down if at bottom of screen)
     for opt
@@ -93,6 +98,8 @@ select_option() {
 
         # user key control
         case `key_input` in
+            escape) escape=true
+                    break;;
             enter) break;;
             up)    ((selected--));
                    if [ $selected -lt 0 ]; then selected=$(($# - 1)); fi;;
@@ -150,21 +157,31 @@ get_branches() {
 
 
     # additionally add a "new branch" option
-    
-    if [ $hasDevelop -eq 1 ]; then
-        rootName="develop"
-        options+=( "$(createNewPrompt)" )
-    elif [  $hasMaster -eq 1 ]; then
-        rootName="master"
-        options+=( "$(createNewPrompt)" )
+    if [ "$mode" = "c" ]; then
+        if [ $hasDevelop -eq 1 ]; then
+            rootName="develop"
+            options+=( "$(createNewPrompt)" )
+        elif [  $hasMaster -eq 1 ]; then
+            rootName="master"
+            options+=( "$(createNewPrompt)" )
+        fi
     fi
 
     rm $PWD/branches.txt
 }
 
+render_prompt() {
+    case "${mode}" in
+        c) echo "Select the branch you want to switch to" ;;
+        d) echo "Select the branch you want to delete" ;;
+        n) echo "Select the branch you want to create off of" ;;
+        p) echo "Select the branch you want to update" ;;
+    esac
+}
+
 # show the menu to the user of all of the checked out branches
 render_menu() {
-    echo "Select the branch you want to switch to:"
+    echo "`render_prompt` [Press <- to cancel]:"
     echo
 
     select_option $currentIdx $currentBranch "${options[@]}"
@@ -172,38 +189,145 @@ render_menu() {
     return $choice
 }
 
+branch() {
+    root=$1
 
+    prompt "Branch name : "; bname=`readInput`
 
-# actually check out the selected branch or show an error if its
-# already checked out
-checkout() {
-    choice=$1
-    value=${options[$choice]}
-
+    git co $root
+    git pull
     clear
+    git co -b $bname
+}
 
-    # don't switch to the current branch
+checkout() {
+    value=$1
     if [ "$value" = "$currentBranch" ]; then
         echo "already on branch $currentBranch"
 
     # allow creating a new branch
     elif [ "$value" = "$(createNewPrompt)" ]; then
-        prompt "Branch name : "; bname=`readInput`
-        git co $rootName
-        git pull
-        clear
-        git co -b $bname
+        branch $rootName
 
     else
         git co $value
+
     fi
 }
 
-# run the program
-function main {
-    get_branches
-    render_menu
-    checkout $?
+delete() {
+    bname=$1
+
+    if [ "$bname" = "$currentBranch" ]; then
+        echo "you can't delete your current branch ($currentBranch)"
+        return
+    fi
+
+    prompt "Are you sure you want to delete this branch? (Y/N)"; resp=`readInput`
+    if [ $resp = "Y" ] || [ $resp = "y" ]; then
+        git branch -d $bname
+    fi
 }
 
-main
+pull() {
+    bname=$1
+
+    if [ "$bname" != "$currentBranch" ]; then
+        git co $bname
+    fi
+
+    git pull
+
+    if [ "$bname" != "$currentBranch" ]; then
+        git co $currentBranch
+    fi
+
+    clear
+}
+
+# actually check out the selected branch or show an error if its
+# already checked out
+execute() {
+    if [ $escape = true ]; then
+        clear
+        echo "Canceled"
+        return 0
+    fi
+
+    choice=$1
+    value=${options[$choice]}
+    clear
+
+    # perform the requested action
+    case "${mode}" in
+        c) checkout $value ;;
+        d) delete $value ;;
+        n) branch $value ;;
+        p) pull $value ;;
+    esac
+}
+
+print_help() {
+    BOLD_ON="\033[1m"
+    BOLD_OFF="\033[0m"
+
+    clear
+    echo "${BOLD_ON}Interactive Branch${BOLD_OFF}"
+    echo
+    echo "This runs an interactive version of the git branch list command. It supports"
+    echo "rendering all of the current local branches and running specific commands"
+    echo "against it."
+    echo
+    echo "The different flags that are supported are:"
+    echo
+    echo "  ${BOLD_ON}-c, --checkout${BOLD_OFF}: checks out the specified branch [default]"
+    echo "  ${BOLD_ON}-n, --new-branch${BOLD_OFF}: creates a new offshoot of the specified branch"
+    echo "  ${BOLD_ON}-d, --delete${BOLD_OFF}: locally deletes the specified branch"
+    echo "  ${BOLD_ON}-p, --pull${BOLD_OFF}: pulls the most recent version of the specified branch"
+    echo
+    echo "If you don't specify a flag, this will run in ${BOLD_ON}checkout${BOLD_OFF} mode."
+    echo 
+    echo "You can cancel this utility's action either through the standard ${BOLD_ON}ctrl+c${BOLD_OFF} or"
+    echo "through the ${BOLD_ON}<-${BOLD_OFF} left arrow."
+    echo
+}
+
+get_mode() {
+    while test $# -gt 0; do
+        case "$1" in
+            -d|--delete) 
+                mode="d" 
+                shift
+                ;;
+            -p|--pull) 
+                mode="p" 
+                shift
+                ;;
+            -n|--new-branch) 
+                mode="n" 
+                shift
+                ;;
+            
+            -h|--help)
+                print_help
+                mode="h"
+                shift
+                ;;
+            *) 
+                break
+                ;;
+        esac
+    done
+}
+
+# run the program
+main() {
+    get_mode "$@"
+    if [ $mode = "h" ]; then return; fi
+
+    get_branches
+    render_menu
+    execute $?
+}
+
+main "$@"
