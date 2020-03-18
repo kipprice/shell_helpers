@@ -26,6 +26,8 @@ get_shared_branch() {
 }
 
 
+# TODO: this won't work for multiple cases of groups; we will either need this to be an array or
+# we will need to check this into the git branch somehow (maybe only the shared branch?)
 store_shared_branch() {
     $bname=$1
     echo "{ \
@@ -224,6 +226,13 @@ checkin() {
 }
 
 breakup() {
+
+}
+
+# given a list of branch names, generate the shared branch for them
+# (ideally calculating what that shared branch name is and additionally
+#  executing the group init file)
+combine() {
 
 }
 
