@@ -1,5 +1,11 @@
 branch_name=""
 current_upstream=""
+url=""
+upstream=""
+should_open=0
+
+prompt() { printf "\n$1 "; }
+readInput() { read -e in; echo $in; }
 
 # get the current branch name
 get_branch_name() {
@@ -22,22 +28,54 @@ get_current_upstream() {
     current_upstream=${pieces[1]}
 }
 
-
-main() {
-    get_branch_name
-    get_current_upstream
+do_push() {
+    upstream=$current_upstream
 
     # run the appropriate push command
     if [[ ! -z $current_upstream ]]; then
-        git push
-        clear
-        echo "Pushed to $current_upstream"
+        #git push
+        url="https://github.com/codecademy-engineering/Codecademy/pull/$branch_name"
+
     else
         git push --set-upstream origin $branch_name
-        clear
-        echo "Pushed to origin/$branch_name"
+        upstream="origin/$branch_name"
+        url="https://github.com/codecademy-engineering/Codecademy/pull/new/$branch_name"
+
     fi
-    
 }
 
-main
+show_message() {
+    BOLD_ON="\033[1m"
+    BOLD_OFF="\033[0m"
+
+    echo ""
+    printf "Pushed to ${BOLD_ON}$upstream${BOLD_OFF}\n  --> $url\n\n"
+}
+
+parse_flag() {
+    while test $# -gt 0; do
+        case "$1" in
+            -o|--open) 
+                should_open=1
+                shift
+                ;;
+        esac
+    done
+}
+
+open_if_applicable() {
+    if [[ $should_open -eq 1 ]]; then
+        open $url
+    fi
+}
+
+main() {
+    parse_flag "$@"
+    get_branch_name
+    get_current_upstream
+    do_push
+    show_message
+    open_if_applicable
+}
+
+main "$@"
