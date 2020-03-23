@@ -33,7 +33,7 @@ do_push() {
 
     # run the appropriate push command
     if [[ ! -z $current_upstream ]]; then
-        #git push
+        git push
         url="https://github.com/codecademy-engineering/Codecademy/pull/$branch_name"
 
     else
