@@ -170,7 +170,7 @@ new_branch() {
     # get the name if not provided
     bname=$1
     if [ -z $bname ]; then
-        prompt "what should the name of the new branch be?"; bname=`read_input`
+        printf "\nwhat should the name of the new branch be? $root_branch-"; bname=`read_input`
     fi
 
     # setup the feature branch name
@@ -280,7 +280,21 @@ checkin() {
 }
 
 breakup() {
-    return 1
+
+    # get the name of the root branch to merge off of
+    rname=$1
+    if [ -z $rname ]; then
+        rname=master
+    fi
+
+    # clone the current integration branch to generate  
+
+
+    return 0
+}
+
+breakup_done() {
+
 }
 
 # TODO: make this
