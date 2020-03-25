@@ -6,7 +6,7 @@ NEW_FEATURE="+ New Feature"
 # global vars to be used in the checkin portion of the program
 message=""
 root_branch=""
-feature_branch
+feature_branch=""
 declare -a options=()
 
 
@@ -239,7 +239,7 @@ export_broken_state() {
 
 get_broken_state() {
     while read x; do
-
+        echo $x
     done < $PWD/.grit_state
 }
 
@@ -323,8 +323,8 @@ main() {
     case $command in
         # init) init "$1" ;;
         commit|ci) checkin "$@"; break ;;
-        # breakup|br) breakup "$1" ;;
-        rebase|rb) rebase "$@"; break ;;
+        breakup|bk) breakup "$1" ;;
+        # rebase|rb) rebase "$@"; break ;;
         continue|cont) continue "$@"; break ;;
 
         # default is to run the git equivalent command
