@@ -229,7 +229,15 @@ delete() {
 
     prompt "Are you sure you want to delete $bname? (Y/N)"; resp=`readInput`
     if [ $resp = "Y" ] || [ $resp = "y" ]; then
-        git branch -d $bname
+        git branch -d --quiet $bname
+        if [ $? -ne 0 ]; then
+            prompt "delete failed; try to hard delete $bname? (Y/N)"
+            resp=`readInput`
+            
+            if [ $resp = "Y" ] || [ $resp = "y" ]; then
+                git branch -D $bname
+            fi
+        fi
     fi
 }
 
@@ -265,7 +273,7 @@ execute() {
 
     # perform the requested action
     case "${mode}" in
-        c) checkout $value ;;
+        c) checkout "$value" ;;
         d) delete $value ;;
         n) new_branch $value ;;
         p) pull $value ;;
