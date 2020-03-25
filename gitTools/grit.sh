@@ -178,13 +178,36 @@ new_branch() {
     git branch $feature_branch
 }
 
+## BEGIN BROKEN STATE ##
+export_broken_state() {
+    echo "GRIT_FEATURE_BNAME=$feature_branch \
+            GRIT_ROOT_BNAME=$root_branch \
+            GRIT_FAILED_AT=$1 \
+            GRIT_FAILED_COMMAND=$command \
+            GRIT_IS_BROKEN=1" > $PWD/.grit_state
+}
+
+get_broken_state() {
+    while read x; do
+        echo $x
+    done < $PWD/.grit_state
+}
+
+reset_broken_state() {
+    rm $PWD/.grit_state
+}
+## END BROKEN STATE ##
+
 process_checkin_args() {
     while test $# -gt 0; do
+        echo $1
+        read -e debug
+
         case "$1" in
             -i) interactive_branch ;;
             -b) new_branch "$2"; shift ;;
             -m) message="$2"; shift ;;
-            *)  feature_branch=$1; break;;
+            *)  interactive_branch; break;;
         esac
         shift
     done
@@ -229,26 +252,6 @@ apply_stash_to_branch() {
     git ci -m "$msg"
 }
 
-## BEGIN BROKEN STATE ##
-export_broken_state() {
-    echo "GRIT_FEATURE_BNAME=$feature_branch \
-            GRIT_ROOT_BNAME=$root_branch \
-            GRIT_FAILED_AT=$1 \
-            GRIT_FAILED_COMMAND=$command \
-            GRIT_IS_BROKEN=1" > $PWD/.grit_state
-}
-
-get_broken_state() {
-    while read x; do
-        echo $x
-    done < $PWD/.grit_state
-}
-
-reset_broken_state() {
-    rm $PWD/.grit_state
-}
-## END BROKEN STATE ##
-
 checkin() {
 
     # ensure we've performed the prep we need
@@ -257,7 +260,7 @@ checkin() {
 
     # double stash the current set of changes; this will allow
     # us to track the staged vs unstaged changes separately
-    git stash --keep-index
+    git stash -k -a
     git stash
 
     # check in changes to feature branch and root branch
@@ -344,7 +347,7 @@ main() {
     case $command in
         # init) init "$1" ;;
         commit|ci) checkin "$@"; break ;;
-        breakup|bk) breakup "$1" ;;
+        breakup|bk) breakup "$@" ;;
         # rebase|rb) rebase "$@"; break ;;
         continue|cont) continue "$@"; break ;;
 
