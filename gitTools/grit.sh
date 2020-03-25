@@ -229,6 +229,7 @@ apply_stash_to_branch() {
     git ci -m "$msg"
 }
 
+## BEGIN BROKEN STATE ##
 export_broken_state() {
     echo "GRIT_FEATURE_BNAME=$feature_branch \
             GRIT_ROOT_BNAME=$root_branch \
@@ -246,6 +247,7 @@ get_broken_state() {
 reset_broken_state() {
     rm $PWD/.grit_state
 }
+## END BROKEN STATE ##
 
 checkin() {
 
@@ -287,14 +289,19 @@ breakup() {
         rname=master
     fi
 
-    # clone the current integration branch to generate  
+    # clone the current integration branch to not lose data on the real branch
+    # get_root_branch
+    # git co -b $root_branch---tmp  
 
+    # run the appropriate reset commands
+    git reset --soft $rname
+    git reset
 
     return 0
 }
 
 breakup_done() {
-
+    return 1
 }
 
 # TODO: make this
