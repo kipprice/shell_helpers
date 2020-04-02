@@ -164,6 +164,11 @@ interactive_branch() {
     fi
 }
 
+get_first_commit_in_root() {
+    git log --format=%H master -n 1
+    # git log master..$root_branch --format=%H | tail -1
+}
+
 # generate a new branch for use
 new_branch() {
 
@@ -175,7 +180,11 @@ new_branch() {
 
     # setup the feature branch name
     feature_branch="$root_branch-$bname"
-    git branch $feature_branch
+
+    # checkout from the first node in the integration branch
+    git rev-list --max-parents=0 HEAD
+
+    git branch $feature_branch $(get_first_commit_in_root)
 }
 
 ## BEGIN BROKEN STATE ##
@@ -184,7 +193,7 @@ export_broken_state() {
             GRIT_ROOT_BNAME=$root_branch \
             GRIT_FAILED_AT=$1 \
             GRIT_FAILED_COMMAND=$command \
-            GRIT_IS_BROKEN=1" > $PWD/.grit_state
+            GRIT_IS_BROKEN=1" > $PWD/.git/.grit_state
 }
 
 get_broken_state() {
