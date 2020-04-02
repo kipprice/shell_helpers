@@ -153,7 +153,7 @@ interactive_branch() {
     generate_feature_options
 
     clear
-    echo "Which feature branch should this be committed to? (type <- to exit)"
+    echo "Which feature branch should this be committed to?"
     render_menu "${options[@]}"
     choice=$?
     value=${options[$choice]}
@@ -182,8 +182,6 @@ new_branch() {
     feature_branch="$root_branch-$bname"
 
     # checkout from the first node in the integration branch
-    git rev-list --max-parents=0 HEAD
-
     git branch $feature_branch $(get_first_commit_in_root)
 }
 
@@ -209,8 +207,6 @@ reset_broken_state() {
 
 process_checkin_args() {
     while test $# -gt 0; do
-        echo $1
-        read -e debug
 
         case "$1" in
             -i) interactive_branch ;;
@@ -231,15 +227,20 @@ get_message() {
 
 check_feature_branch() {
     if [ -z $feature_branch ]; then
+        interactive_branch
+    fi
+
+    if [ -z $feature_branch ]; then
         echo "no feature branch"
         return 1
     fi
+
     return 0
 }
 
 prep_checkin() {
 
-    process_checkin_args $@
+    process_checkin_args "$@"
 
     # ensure we have the other data that we need
     check_feature_branch
@@ -267,27 +268,39 @@ checkin() {
     prep_checkin "$@"
     if [ $? -eq 1 ]; then return 1; fi
 
+    echo "==> stashing changes"
+    yarn precommit
     # double stash the current set of changes; this will allow
     # us to track the staged vs unstaged changes separately
-    git stash -k -a
+    git stash -k -u
     git stash
+    #read -e pause
 
     # check in changes to feature branch and root branch
+    clear
+    echo "\n==> applying changes to $feature_branch"
     apply_stash_to_branch $feature_branch "$message"
     if [ $? -eq 1 ]; then 
         export_broken_state "feature"
         return 1; 
     fi
+    #read -e pause
 
+    clear
+    echo "\n==> applying changes to $root_branch"
     apply_stash_to_branch $root_branch "$message ($feature_branch)"
     if [ $? -eq 1 ]; then 
         export_broken_state "root"
         return 1; 
     fi
+    #read -e pause
 
     # now apply the other unstaged changes
+    clear
+    echo "\n==> removing stashed changes"
     git stash drop
     git stash pop
+    #read -e pause
 
     # success
     return 0
