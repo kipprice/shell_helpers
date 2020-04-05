@@ -28,18 +28,25 @@ get_current_upstream() {
     current_upstream=${pieces[1]}
 }
 
+get_upstream_url() {
+    url=$(git config --get remote.origin.url)
+    strLen=${#url}
+    newLen=strLen-4
+    echo ${url:1:newLen}
+}
+
 do_push() {
     upstream=$current_upstream
-
+    upstreamUrl=$(get_upstream_url)
     # run the appropriate push command
     if [[ ! -z $current_upstream ]]; then
         git push
-        url="https://github.com/codecademy-engineering/Codecademy/pull/$branch_name"
+        url="$upstreamUrl/pull/$branch_name"
 
     else
         git push --set-upstream origin $branch_name
         upstream="origin/$branch_name"
-        url="https://github.com/codecademy-engineering/Codecademy/pull/new/$branch_name"
+        url="$upstreamUrl/pull/new/$branch_name"
 
     fi
 }
