@@ -30,14 +30,17 @@ get_current_upstream() {
 
 get_upstream_url() {
     url=$(git config --get remote.origin.url)
+    declare -i strLen
     strLen=${#url}
-    newLen=strLen-4
-    echo ${url:1:newLen}
+    declare -i newLen
+    newLen=$strLen-4
+    echo ${url:0:newLen}
 }
 
 do_push() {
     upstream=$current_upstream
     upstreamUrl=$(get_upstream_url)
+
     # run the appropriate push command
     if [[ ! -z $current_upstream ]]; then
         git push
