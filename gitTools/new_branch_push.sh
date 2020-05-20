@@ -34,7 +34,10 @@ get_upstream_url() {
     strLen=${#url}
     declare -i newLen
     newLen=$strLen-4
-    echo ${url:0:newLen}
+    trimmed_url=${url:0:newLen}
+
+    # make sure that if using the git@github syntax, we still return a strict URL
+    echo $trimmed_url | sed -e "s/git@github.com:/http:\/\/github.com\//g"
 }
 
 do_push() {
