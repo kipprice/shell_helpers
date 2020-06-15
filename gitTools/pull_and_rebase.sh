@@ -4,6 +4,7 @@ use_interactive=0
 rebase_branch_name=""
 cur_branch_name=""
 should_show_help=0
+should_push=0
 
 get_branch_name() {
     cur_branch_name=$(git symbolic-ref HEAD | cut -d/ -f3-)
@@ -18,6 +19,10 @@ parse_flags() {
                 ;;
             -i|--interactive)
                 use_interactive=1
+                shift
+                ;;
+            -p|--push)
+                should_push=1
                 shift
                 ;;
             *)
@@ -41,12 +46,12 @@ show_help() {
     echo
     echo "Run this as 'sh ./pull_and_rebase.sh branch-name' where 'branch-name'"
     echo "is the name of the branch you are rebasing from."
-    echo
-    echo "'branch-name' defaults to master if not provided"
+    echo "('branch-name' defaults to master if not provided)"
     echo
     echo
     echo "The different flags that are supported are:"
     echo "  ${BOLD_ON}-i, --interactive${BOLD_OFF}: runs the rebase in interactive mode"
+    echo "  ${BOLD_ON}-p, --push${BOLD_OFF}: force push the branch after the rebase if no errors occurred"
     echo "  ${BOLD_ON}-h, --help${BOLD_OFF}: show this help text"
     echo
     echo "Flags must be specified before the branch name."
@@ -102,6 +107,15 @@ run_rebase_with_pull() {
 
     # re-checkout the original branch
     rebase_cur_branch
+    if [ $? -ne 0 ]; then
+        return $?
+    fi
+
+    clear
+    echo "Rebase Completed!"
+    if [ $should_push -eq 1 ]; then
+        git push -f
+    fi
 }
 
 
