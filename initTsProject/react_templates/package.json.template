@@ -1,0 +1,17 @@
+{
+  "name": "${name}",
+  "version": "1.0.0",
+  "description": "${description}",
+  "author": "Kip Price",
+  "license": "MIT",
+
+  "main": "dist/${fname}",
+  "module": "dist/${fname}",
+  "types": "typings/index",
+
+  "scripts": {
+    "start": "webpack-dev-server --open",
+    "build": "webpack",
+    "test": "npx jest -- -t .test.ts"
+  }
+}
