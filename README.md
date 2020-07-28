@@ -8,7 +8,7 @@ Various tools to make git easier to work with Git branches.
 An interactive view of the branches that are currently available locally. Run as `sh ./ibranch.sh --help` to see a full list of options within the interactive view.
 
 ### new_branch_push
-A shortcut to ```git push --set-upstream [upstream branch]``` (or just ```git push``` if there is already an upstream). Pass in the `-o` flag to also open a web browser window to a pull request from the newly pushed branch.
+A shortcut to ```git push --set-upstream origin [branch_name]``` (or just ```git push``` if there is already an upstream). Pass in the `-o` flag to also open a web browser window to a pull request from the newly pushed branch.
 
 ### pull_and_rebase
 A shortcut command for performing the following commands:
