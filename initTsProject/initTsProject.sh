@@ -13,7 +13,7 @@ declare -r TOOLKIP_DIRECTORY="toolkip_templates"
 
 declare -r SHARED_DEV_DEPENDENCIES="typescript webpack webpack-cli webpack-dev-server ts-loader jest jest-cli ts-jest @types/jest"
 declare -r TOOLKIP_DEV_DEPENDENCIES="terser-webpack-plugin"
-declare -r REACT_DEV_DEPENDENCIES="@babel/core @babel/plugin-proposal-class-properties @babel/plugin-proposal-object-rest-spread @babel/plugin-transform-runtime @babel/preset-env @babel/preset-react @babel/preset-typescript @babel/runtime babel-loader css-loader style-loader sass sass-loader @types/react @types/react-dom tslint tslint-immutable @types/redux"
+declare -r REACT_DEV_DEPENDENCIES="@babel/core @babel/plugin-proposal-class-properties @babel/plugin-proposal-object-rest-spread @babel/plugin-transform-runtime @babel/preset-env @babel/preset-react @babel/preset-typescript @babel/runtime babel-loader css-loader style-loader sass sass-loader @types/react @types/react-dom tslint tslint-immutable @types/redux @types/react-redux"
 declare -r REACT_DEPENDENCIES="react react-dom react-redux redux redux-thunk"
 
 getDirectory() {
@@ -286,7 +286,7 @@ createIndexHtml() {
 	sed \
 		-e "s/\${name}/$m_Name/" \
 		-e "s/\${fname}/$m_Filename/" \
-		$DIR/shared_templates/index.html.template \
+		$DIR/$m_SubDirectory/index.html.template \
 		> index.html
 }
 

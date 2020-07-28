@@ -14,6 +14,10 @@ currentIdx=-1
 rootName=""
 mode="c"
 escape=false
+hasMaster=0
+hasDevelop=0
+hasMain=0
+
 declare -a options=()
 
 # helpers to show & read info from the user
@@ -145,8 +149,11 @@ get_branches() {
         fi
 
         # track what the root node is for branch creation
+        # order here doesn't matter
         if [ $line = "master" ]; then 
             hasMaster=1
+        elif [ "$line" = "main" ]; then
+            hasMain=1
         elif [ $line = "develop" ]; then
             hasDevelop=1
         fi
@@ -158,13 +165,17 @@ get_branches() {
 
     # additionally add a "new branch" option
     if [ "$mode" = "c" ]; then
+
+        # get the root branch name
         if [ $hasDevelop -eq 1 ]; then
             rootName="develop"
-            options+=( "$(createNewPrompt)" )
-        elif [  $hasMaster -eq 1 ]; then
+        elif [ $hasMain -eq 1 ]; then
+            rootName="main"
+        elif [ $hasMaster -eq 1 ]; then
             rootName="master"
-            options+=( "$(createNewPrompt)" )
         fi
+
+        options+=( "$(createNewPrompt)" )
     fi
 
     rm $PWD/branches.txt
