@@ -1,0 +1,5 @@
+const _init = () => {
+    // TODO: start the app
+}
+
+window.addEventListener( 'load', () => _init() )

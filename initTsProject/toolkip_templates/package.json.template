@@ -3,14 +3,15 @@
     "version": "1.0.0",
     "description": "${description}",
     "license": "MIT",
-    "author": "${author}",
+    "author": "Kip Price",
     "test": "jest",
 
-    "main": "compiled_js/${fname}",
-    "module": "compiled_js/${fname}",
+    "main": "dist/${fname}",
+    "module": "dist/${fname}",
     "types": "typings/index",
 
     "scripts": {
+        "start": "webpack-dev-server --open",
         "build": "npm run build:tsc && npm run build:webpack",
         "build:webpack": "webpack",
         "build:tsc": "tsc -p tsconfig.json --emitDeclarationOnly",

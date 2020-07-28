@@ -1,0 +1,9 @@
+<!HTML>
+<html>
+    <head>
+        <title>${name}</title>
+    </head>
+    <body>
+        <script src="dist/${fname}.js"></script>
+    </body>
+</html>
