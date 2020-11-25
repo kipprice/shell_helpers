@@ -1,0 +1,20 @@
+{
+    "name": "${name}",
+    "version": "1.0.0",
+    "description": "${description}",
+    "license": "MIT",
+    "author": "Kip Price",
+    "test": "jest",
+
+    "main": "dist/${fname}",
+    "module": "dist/${fname}",
+    "types": "typings/index",
+
+    "scripts": {
+        "start": "webpack-dev-server --open",
+        "build": "npm run build:tsc && npm run build:webpack",
+        "build:webpack": "webpack",
+        "build:tsc": "tsc -p tsconfig.json --emitDeclarationOnly",
+        "test": "npx jest -- -t .test.ts"
+    }
+}

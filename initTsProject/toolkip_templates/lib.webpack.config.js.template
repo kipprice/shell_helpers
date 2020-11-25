@@ -1,0 +1,43 @@
+const path = require('path');
+const TerserPlugin = require('terser-webpack-plugin');
+
+module.exports = {
+    mode: "development",
+    entry: './src/index.ts',
+
+    module: {
+        rules: [
+            {
+                test: /\.tsx?$/,
+                use: 'ts-loader',
+                exclude: /node_modules/,
+            },
+        ],
+    },
+    resolve: {
+        extensions: ['.tsx', '.ts', '.js'],
+    },
+    output: {
+        filename: '${fname}.js',
+        path: path.resolve(__dirname, "dist"),
+        ${library}
+    },
+    optimization: {
+        minimizer: [
+            new TerserPlugin({
+                sourceMap: true,
+                terserOptions: {
+                    keep_fnames: true,
+                    keep_classnames: true
+                }
+            })
+        ]
+    },
+
+    devServer: {
+        contentBase: [path.join(__dirname, './')],
+        publicPath: '/dist/',
+        compress: true,
+        port: 5050
+  }
+};	

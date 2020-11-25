@@ -6,7 +6,7 @@
 		"strictNullChecks": true,
 		"moduleResolution": "node",
 		"allowJs": true,
-		"noEmit": true,
+		"${emitType}": true,
 		"strict": true,
 		"esModuleInterop": true,
 		"jsx": "react",

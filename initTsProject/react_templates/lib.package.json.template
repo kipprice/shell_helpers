@@ -1,0 +1,27 @@
+{
+  "name": "${name}",
+  "version": "1.0.0",
+  "description": "${description}",
+  "author": "Kip Price",
+  "license": "MIT",
+
+  "main": "dist/",
+  "module": "dist/",
+  "types": "typings/src/index.d.ts",
+
+  "files": [
+    "/dist",
+    "/typings", 
+    "/package.json",
+    "/README.md"
+  ],
+
+  "scripts": {
+    "clean": "rm -rf ./dist && rm -rf ./typings",
+    "build": "yarn build:tsc && yarn build:babel",
+    "build:babel": "babel src --out-dir dist --extensions \".ts,.tsx\"",
+    "build:tsc": "tsc -p tsconfig.json",
+    "test": "npx jest -- -t .test.ts",
+    "prepack": "yarn clean && yarn build"
+  }
+}

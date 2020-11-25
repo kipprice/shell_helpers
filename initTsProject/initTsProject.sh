@@ -1,22 +1,48 @@
 #!/bin/sh
 
-declare m_Mode="toolkip"
+declare m_Mode="react"
 declare m_Name=""
 declare m_Description=""
-declare m_Filename=""
+declare m_Filename="index"
 declare m_IsLibrary=0
+declare m_LibraryName=""
 declare m_SubDirectory=""
+declare m_IncludeRedux=1
+declare m_IncludeEmotion=0
 
-declare -r STEP_COUNT=7
+declare -a m_Libraries=()
+
+declare m_CurrentStep=0
+declare -r STEP_COUNT=10
+
 declare -r REACT_DIRECTORY="react_templates"
 declare -r TOOLKIP_DIRECTORY="toolkip_templates"
 
-declare -r SHARED_DEV_DEPENDENCIES="typescript webpack webpack-cli webpack-dev-server ts-loader jest jest-cli ts-jest @types/jest"
+declare -r SHARED_DEV_DEPENDENCIES="typescript jest jest-cli ts-jest @types/jest tslint"
 declare -r TOOLKIP_DEV_DEPENDENCIES="terser-webpack-plugin"
-declare -r REACT_DEV_DEPENDENCIES="@babel/core @babel/plugin-proposal-class-properties @babel/plugin-proposal-object-rest-spread @babel/plugin-transform-runtime @babel/preset-env @babel/preset-react @babel/preset-typescript @babel/runtime babel-loader css-loader style-loader sass sass-loader @types/react @types/react-dom tslint tslint-immutable @types/redux @types/react-redux"
-declare -r REACT_DEPENDENCIES="react react-dom react-redux redux redux-thunk"
+declare -r WEBPACK_DEV_DEPENDENCIES="webpack@4 webpack-cli webpack-dev-server ts-loader"
 
-getDirectory() {
+declare -r BABEL_DEV_DEPENDENCIES="@babel/core @babel/plugin-proposal-class-properties @babel/plugin-proposal-object-rest-spread @babel/plugin-transform-runtime @babel/preset-env @babel/preset-react @babel/preset-typescript @babel/runtime babel-loader"
+
+declare -r REACT_DEPENDENCIES="react react-dom"
+declare -r REACT_DEV_DEPENDENCIES="@types/react @types/react-dom tslint-immutable"
+
+declare -r REDUX_DEPENDENCIES="react-redux redux redux-thunk"
+declare -r REDUX_DEV_DEPENDENCIES="@types/redux @types/react-redux"
+
+declare -r CSS_MODULES_DEV_DEPENDENCIES="css-loader style-loader sass sass-loader"
+# TODO: support emotion 11 at some point
+declare -r EMOTION_DEPENDENCIES="@emotion/core@10 @emotion/styled@10"
+
+declare -r DEFAULT_DIRECTORY="src"
+declare -r LIB_DIRECTORY="lib"
+declare -r EXAMPLE_DIRECTORY="docs"
+declare -r ROOT_DIRECTORY="."
+
+# =======
+# HELPERS
+# =======
+get_directory() {
 	DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 }
 
@@ -66,13 +92,30 @@ safeMkdir() {
 	foldername=$1
 
 	if [ ! -d "$foldername" ]; then
-		mkdir $foldername
-	else
-		echo "\t($foldername already created)"
+		mkdir -p $foldername
 	fi
 }
 
+safeCp() {
+	from_file="$1"
+	to_file="$2"
+
+	canCreateFile "$to_file"
+	if [[ "$?" = "0" ]]; then return; fi
+
+	cp "$from_file" "$to_file"
+}
+
+step_title() {
+	title="$1"
+	m_CurrentStep=$(($m_CurrentStep+1))
+	echo "\n>> $title [$m_CurrentStep/$STEP_COUNT]"
+}
+
+# ===========================
 # MODE SPECIFIC FUNCTIONALITY
+# ===========================
+
 get_directory_for_mode() {
 	if [[ "$m_Mode" = "toolkip" ]]; then
 		echo $TOOLKIP_DIRECTORY
@@ -81,227 +124,423 @@ get_directory_for_mode() {
 	fi
 }
 
-get_dev_dependencies_for_mode() {
+add_dev_dependencies_for_mode() {
+	is_lib=$1
+
+	dependencies="$SHARED_DEV_DEPENDENCIES"
+
+	# ==> mode differentiation
 	if [[ "$m_Mode" = "toolkip" ]]; then
-		echo "$SHARED_DEV_DEPENDENCIES $TOOLKIP_DEV_DEPENDENCIES"
+		dependencies="$dependencies $TOOLKIP_DEV_DEPENDENCIES"
 	else
-		echo "$SHARED_DEV_DEPENDENCIES $REACT_DEV_DEPENDENCIES"
+		dependencies="$dependencies $REACT_DEV_DEPENDENCIES $BABEL_DEV_DEPENDENCIES"
+	fi
+
+	# ==> library differentiation (libraries don't use webpack)
+	if [[ "$is_lib" != "1" ]]; then
+		dependencies="$dependencies $WEBPACK_DEV_DEPENDENCIES"
+	else 
+		dependencies="$dependencies @babel/cli"
+	fi
+
+	yarn add --dev $dependencies
+}
+
+add_dependencies_for_mode() {
+	is_lib=$1
+
+	if [[ "$m_Mode" = "toolkip" ]]; then return; fi
+
+	if [[ "$is_lib" = "1" ]]; then
+		echo "adding as peer"
+		yarn add --peer $REACT_DEPENDENCIES
+		yarn add --dev $REACT_DEPENDENCIES
+	else
+		yarn add $REACT_DEPENDENCIES
 	fi
 }
 
-get_dependencies_for_mode() {
-	if [[ "$m_Mode" = "toolkip" ]]; then
-		echo ""
-	else
-		echo "$REACT_DEPENDENCIES"
+add_state_dependencies() {
+	if [ "$m_IncludeRedux" = "1" ]; then
+		yarn add $REDUX_DEPENDENCIES
 	fi
 }
 
+add_state_dev_dependencies() {
+	if [ "$m_IncludeRedux" = "1" ]; then
+		yarn add $REDUX_DEV_DEPENDENCIES
+	fi
+}
+
+add_style_dependencies() {
+	if [ "$m_IncludeEmotion" = "1" ]; then
+		yarn add $EMOTION_DEPENDENCIES
+	fi
+}
+
+add_style_dev_dependencies() {
+	if [ "$m_IncludeEmotion" = "0" ]; then
+		yarn add --dev $CSS_MODULES_DEV_DEPENDENCIES
+	fi
+}
+
+# ==============
 # MAIN FUNCTIONS
-createPackage() {
+# ==============
 
-	echo "\n>> create package file [1/$STEP_COUNT]"
-	canCreateFile "package.json"
-	local canCreate=$?
-	if [ "$canCreate" = "0" ]; then
-		return
-	fi
+collect_info() {
+	step_title "collecting information"
 
-	# GET DETAILS FOR PACKAGE
 	prompt "Package name : "; m_Name=`readInput`
 	prompt "Description : "; m_Description=`readInput`
-	prompt "Output Filename : "; m_Filename=`readInput`
-	yn "Is this a library? "; m_IsLibrary=$? 
-
-	if [ "$m_IsLibrary" = "1" ]; then
-		prompt "Library Name (no @) : "; libName=`readInput`
-		nameToUse="@$libName\/$m_Name"
-	else
-		nameToUse=$m_Name
-	fi
-
-	touch package.json
-	sed \
-		-e "s/\${name}/$nameToUse/" \
-		-e "s/\${description}/$m_Description/" \
-		-e "s/\${fname}/$m_Filename/" \
-		$DIR/$m_SubDirectory/package.json.template \
-		> package.json
-}
-
-installDependencies() { 
-	echo "\n>> installing dependencies [2/$STEP_COUNT]"
-
-	local shouldInstall
-	if [ -d "node_modules" ]; then
-		yn "Reinstall dependencies?"
-		shouldInstall=$?
-	fi
-	
-	if [ "$shouldInstall" = "0" ]; then
-		return
-	fi
-
-	rm -rf node_modules
-
-	# ==> add the development dependencies for the mode
-	yarn add --dev `get_dev_dependencies_for_mode`
-
-	# ==> if therere are regular dependencies, install those too
-	dependencies="`get_dependencies_for_mode`"
-	if [[ ! -z $dependencies ]]; then
-		yarn add $dependencies
-	fi
-}
-
-createFolders() {
-	echo "\n>> creating directories [3/$STEP_COUNT]"
-	safeMkdir src
-	if [[ "$m_Mode" = "react" ]]; then
-		safeMkdir src/models
-	fi
-	safeMkdir dist
-}
-
-createIndex() {
-	echo "\n>> creating entry point [4/$STEP_COUNT]"
 
 	if [[ "$m_Mode" = "toolkip" ]]; then
-		createToolkipIndex
-	else
-		createReactIndex
+		prompt "Output Filename : "; m_Filename=`readInput`
+	fi
+
+	yn "Is this a library? "; m_IsLibrary=$? 
+
+	if [[ "$m_Mode" = "toolkip" ]]; then
+		return
+	fi
+
+	# TODO: respect this answer
+	# yn "Include Redux?"; m_IncludeRedux=$?
+	yn "Include Emotion?"; m_IncludeEmotion=$?
+}
+
+generate_folders() {
+	step_title "generating folders"
+
+	folder_path=$1
+
+	safeMkdir $folder_path
+	safeMkdir $folder_path/dist
+	safeMkdir $folder_path/node_modules
+	safeMkdir $folder_path/typings
+
+	if [[ "$m_IncludeRedux" = "1" ]]; then
+		safeMkdir $folder_path/src/models
 	fi
 }
 
-createToolkipIndex() {
-	canCreateFile src/index.ts
-	local canCreate=$?
-	if [ "$canCreate" = "0" ]; then
-		return
+# =======
+# PACKAGE
+# =======
+create_package() {
+	step_title "creating package file"
+
+	folder=$1
+	is_lib=$2
+	is_example=$3
+
+	name_to_use=$m_Name
+	if [[ "$is_example" = "1" ]]; then name_to_use="$m_Name-example"; fi
+
+	package_path="$folder/package.json"
+
+	# ==> verify that we can create this file
+	canCreateFile "$package_path"
+	local can_create=$?
+	if [[ "$can_create" = "0" ]]; then return; fi
+
+	# ==> create the package file
+	touch $package_path
+
+	# ==> get the appropriate template
+	template_file="package.json.template"
+	if [[ "$is_lib" = "1" ]]; then
+		template_file="lib.package.json.template"
 	fi
 
-	echo "\twriting index.ts"
-	cp $DIR/$m_SubDirectory/index.ts.template src/index.ts
+	# ==> replace placeholders in the file with the appropriate vars
+	sed \
+		-e "s/\${name}/$name_to_use/" \
+		-e "s/\${description}/$m_Description/" \
+		-e "s/\${fname}/$m_Filename/" \
+		$DIR/$m_SubDirectory/$template_file \
+		> $package_path
+
 }
 
-createReactIndex() {
 
-	# index.tsx
-	canCreateFile src/index.tsx
-	local canCreate=$?
-	if [ "$canCreate" = "0" ]; then
-		return
+
+# =======================
+# CREATING THE INDEX FILE
+# =======================
+create_index_ts() {
+	folder=$1
+
+	file_name="index.tsx"
+	if [[ "$m_Mode" = "toolkip" ]]; then
+		file_name="index.ts"
 	fi
 
-	echo "\twriting index.tsx"
-	cp $DIR/$m_SubDirectory/index.tsx.template src/index.tsx
-
-	# App.tsx
-	canCreateFile src/App.tsx
-	canCreate=$?
-	if [ "$canCreate" = "0" ]; then
-		return
+	# generate the appropriate index file
+	template_file="$file_name.template"
+	if [[ "$folder" = "$LIB_DIRECTORY" ]]; then
+		template_file="lib.$template_file"
 	fi
 
-	echo "\twriting app.tsx"
-	cp $DIR/$m_SubDirectory/app.tsx.template src/App.tsx
-
-	# models/index.ts
-	canCreateFile src/models/index.ts
-	canCreate=$?
-	if [ "$canCreate" = "0" ]; then
-		return
-	fi
-
-	echo "\twriting models/index.ts"
-	cp $DIR/$m_SubDirectory/store.ts.template src/models/index.ts
+	# TODO: don't include redux if not necessary
+	echo "\n > creating $file_name"
+	safeCp "$DIR/$m_SubDirectory/$template_file" "$folder/src/$file_name"
 }
 
-createWebpackConfig() {
-	echo "\n>> writing the webpack config [5/$STEP_COUNT]"
+create_react_templates() {
+	folder=$1
+	is_lib=$2
+	is_example=$3
 
-	canCreateFile "webpack.config.js"
-	local canCreate=$?
-	if [ "$canCreate" = "0" ]; then
-		return
+	# add the app.tsx file
+	echo "\n > creating app.tsx"
+	safeCp "$DIR/$m_SubDirectory/app.tsx.template" "$folder/src/App.tsx"
+
+	# add the models/index file
+	# TODO: allow for different files based on redux
+	echo "\n > creating models folder"
+	safeMkdir $folder/src/models
+	safeCp "$DIR/$m_SubDirectory/thunk.store.ts.template" "$folder/src/models/index.ts"
+}
+
+create_code_templates() {
+	step_title "basic templating"
+
+	folder=$1
+	is_lib=$2
+	is_example=$3
+
+	create_index_ts "$folder"
+
+	# toolkip doesn't need anything beyond this initial file 
+	if [[ "$m_Mode" = "toolkip" ]]; then return; fi
+
+	create_react_templates "$@"
+}
+
+# ==============
+# WEBPACK CONFIG
+# ==============
+create_webpack_config() {
+	step_title "webpack config"
+
+	folder=$1
+	is_lib=$2
+
+	if [[ "$is_lib" = "1" ]]; then return; fi
+
+	canCreateFile "$folder/webpack.config.js"
+	if [ "$?" = "0" ]; then return; fi
+
+	# set up vars needed by the library file
+	local library_repl=""
+	local template_file="webpack.config.js.template"
+	if [ "$is_lib" = "1" ]; then
+		libraryRepl=$"library:'$m_Name',\
+			libraryTarget:'umd'"
+		template_file="lib.$template_file"
 	fi
 
-	local libraryRepl=""
-	if [ "$m_IsLibrary" -eq 1 ]; then
-		libraryRepl=$"library:'',\
-			libraryTarget:'commonjs'"
-	fi
-
-	echo "\twriting webpack.config.js"
-	touch webpack.config.js
+	# copy the file with replacements
+	touch $folder/webpack.config.js
 	sed \
 		-e "s/\${fname}/$m_Filename/" \
 		-e "s/\${library}/$libraryRepl/" \
-		$DIR/$m_SubDirectory/webpack.config.js.template \
-		> webpack.config.js
-
-	if [[ "$m_Mode" = "react" ]]; then
-		createBabelConfig
-	fi
+		$DIR/$m_SubDirectory/$template_file \
+		> $folder/webpack.config.js
 
 	return
 }
 
-createTsConfig() {
-	echo "\n>> writing the typescript config $m_Filename [6/$STEP_COUNT]"
-	
-	canCreateFile "tsconfig.json"
-	local canCreate=$?
+create_babel_config() {
+	step_title "babel config"
 
-	if [ "$canCreate" = "0" ]; then
-		return
+	if [[ "$m_Mode" != "react" ]]; then return; fi
+
+	folder=$1
+	safeCp "$DIR/$m_SubDirectory/.babelrc.template" "$folder/.babelrc"
+}
+
+# =========
+# TS CONFIG
+# =========
+create_ts_config() {
+	step_title "creating ts config"
+
+	folder=$1
+	is_lib=$2
+
+	touch "$folder/tsconfig.json"
+
+	emit_type="noEmit"
+	if [[ "$is_lib" = "1" ]]; then
+		emit_type="emitDeclarationOnly"
 	fi
 
-	echo "\twriting tsconfig.json"
-	touch tsconfig.json
-	cp $DIR/$m_SubDirectory/tsconfig.json.template ./tsconfig.json
-	return
+	sed \
+		-e "s/\${emitType}/$emit_type/" \
+		"$DIR/$m_SubDirectory/tsconfig.json.template" \
+		> "$folder/tsconfig.json"
 }
 
-createJestConfig() {
-	echo "\n >> writing the jest config file [7/$STEP_COUNT]"
-	npx ts-jest config:init
-}
+# ===========
+# JEST CONFIG
+# ===========
+create_jest_config() {
+	step_title "creating jest config"
 
-createBabelConfig() {
-	echo "\n >> writing .babelrc"
-	cp $DIR/$m_SubDirectory/.babelrc.template ./.babelrc
-}
+	folder=$1
+	current_pwd=`pwd`
 
-createIndexHtml() {
-	echo "\n >> writing index.html"
-	canCreateFile "index.html"
-	local canCreate=$?
+	cd $folder
 
-	if [ "$canCreate" = "0" ]; then
-		return
+	canCreateFile "jest.config.js"
+	if [[ "$?" = "1" ]]; then
+		npx ts-jest config:init
 	fi
 
-	touch index.html
+	cd $current_pwd
+}
+
+# ==========
+# INDEX.HTML
+# ==========
+create_index_html() {
+	step_title "creating index.html"
+
+	folder=$1
+	is_lib=$2
+
+	if [[ "$is_lib" = "1" ]]; then return; fi
+
+	canCreateFile "$folder/index.html"
+	if [ "$?" = "0" ]; then return; fi
+
+	touch $folder/index.html
 	sed \
 		-e "s/\${name}/$m_Name/" \
 		-e "s/\${fname}/$m_Filename/" \
 		$DIR/$m_SubDirectory/index.html.template \
-		> index.html
+		> $folder/index.html
 }
 
-symlinkNodeModules() {
-	echo "\n >> symlinking the node modules folder [8/$STEP_COUNT]"
+# ===
+# SYMLINK
+# ===
 
-	prompt "Would you like to change the folder name? (default: $m_Name) "
-	folderName=`readInput`
-	if [ "$folderName" = "" ]; then
-		folderName=$m_Name
+symlink_node_modules() {
+	step_title "symlinking various things"
+
+	folder=$1
+	is_lib=$2
+	is_example=$3
+
+	default_name="$m_Name"
+	if [[ "$is_lib" = "1" ]]; then default_name="$default_name/lib"; fi
+	if [[ "$is_example" = "1" ]]; then default_name="$default_name/docs"; fi
+
+	echo " > symlinking node_modules from $folder"
+
+	prompt "Would you like to change the folder name? (default: $default_name) "
+	home_folder_name=`readInput`
+	if [ "$home_folder_name" = "" ]; then
+		home_folder_name=$default_name
 	fi
 
-	mkdir ~/npm/$folderName
-	mv ./node_modules ~/npm/$folderName/node_modules
-	ln -s ~/npm/$folderName/node_modules $PWD
+	safeMkdir ~/npm/$home_folder_name
+	mv $folder/node_modules ~/npm/$home_folder_name
+	ln -s ~/npm/$home_folder_name/node_modules $PWD/$folder
+}
+
+link_library() {
+	echo " > linking library"
+
+	if [[ "$m_IsLibrary" != "1" ]]; then
+		echo "   (nothing to link)"
+		return
+	fi
+	
+	rm -rf $PWD/docs/node_modules/$m_Name
+	safeMkdir $PWD/docs/node_modules/$m_Name
+	
+	ln -sF $PWD/lib/dist $PWD/docs/node_modules/$m_Name/dist
+	ln -sF $PWD/lib/typings $PWD/docs/node_modules/$m_Name/typings
+	ln -sF $PWD/lib/package.json $PWD/docs/node_modules/$m_Name/package.json
+}
+
+# ============
+# DEPENDENCIES
+# ============
+install_dependencies() {
+	step_title "installing dependencies"
+
+	folder=$1
+	is_lib=$2
+	is_example=$3
+
+	current_pwd=`pwd`
+
+	node_modules_path="$folder/node_modules"
+
+	# ==> verify it's worthwhile to reinstall
+	local shouldInstall
+	if [ -d "$node_modules_path" ]; then
+		yn "Reinstall dependencies?"; shouldInstall=$?
+	fi
+	if [ "$shouldInstall" = "0" ]; then return; fi
+
+	cd $folder
+
+	# ==> delete the existing folders
+	rm -rf node_modules
+
+	# ==> add all of the relevant dependencies
+	add_dev_dependencies_for_mode $is_lib
+	add_dependencies_for_mode $is_lib
+	add_style_dev_dependencies $is_lib
+	add_style_dependencies $is_lib
+	add_state_dev_dependencies $is_lib
+	add_state_dependencies $is_lib
+
+	if [[ "$is_example" = "1" ]]; then
+		yarn add file:./../lib
+	fi
+
+	cd $current_pwd
+}
+
+# ===
+# FUTURE: SUPPORT MULTIPLE PARAMS
+# ===
+get_params() {
+	while test $# -gt 0; do
+        case "$1" in
+            -h|--help)
+                print_help
+                mode="h"
+                shift
+                ;;
+
+            *) 
+				m_Libraries+=( $1 )
+                shift
+                ;;
+        esac
+    done
+}
+
+setup_folder() {	
+	m_CurrentStep=0
+	generate_folders "$@"
+	create_package "$@"
+	create_code_templates "$@"
+	create_webpack_config "$@"
+	create_babel_config "$@"
+	create_ts_config "$@"
+	create_index_html "$@"
+	symlink_node_modules "$@"
+	install_dependencies "$@"
+	create_jest_config "$@"
 }
 
 main() {
@@ -310,18 +549,20 @@ main() {
 	if [[ ! -z $1 ]]; then
 		m_Mode=$1
 	fi
-	m_SubDirectory=`get_directory_for_mode`
 
-	getDirectory
-	createPackage
-	installDependencies
-	createFolders
-	createIndex
-	createWebpackConfig
-	createTsConfig
-	createJestConfig
-	createIndexHtml
-	symlinkNodeModules
+	# set up the directories
+	m_SubDirectory=`get_directory_for_mode`
+	get_directory
+	collect_info
+
+	if [[ "$m_IsLibrary" = "1" ]]; then
+		setup_folder $LIB_DIRECTORY 1 0
+		setup_folder $EXAMPLE_DIRECTORY 0 1
+	else 
+		setup_folder "." 0 0
+	fi
+
+	link_library
 
 	echo "\n>> Done!"
 }

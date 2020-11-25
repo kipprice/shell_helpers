@@ -1,0 +1,16 @@
+import React from 'react';
+import { App } from './App';
+import { store } from './models';
+import { Provider } from 'react-redux';
+
+export const Index = () => {
+  return (
+    <React.StrictMode>
+      <Provider store={store}>
+        <App />
+      </Provider>
+    </React.StrictMode>
+  )
+}
+
+export default Index;
