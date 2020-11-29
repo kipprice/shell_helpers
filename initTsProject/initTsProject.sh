@@ -424,9 +424,9 @@ create_index_html() {
 		> $folder/index.html
 }
 
-# ===
+# =======
 # SYMLINK
-# ===
+# =======
 
 symlink_node_modules() {
 	step_title "symlinking various things"
@@ -443,13 +443,15 @@ symlink_node_modules() {
 
 	prompt "Would you like to change the folder name? (default: $default_name) "
 	home_folder_name=`readInput`
-	if [ "$home_folder_name" = "" ]; then
+	if [[ "$home_folder_name" = "" ]]; then
 		home_folder_name=$default_name
 	fi
 
-	safeMkdir ~/npm/$home_folder_name
-	mv $folder/node_modules ~/npm/$home_folder_name
-	ln -s ~/npm/$home_folder_name/node_modules $PWD/$folder
+	# use a helper file for this
+	cur_pwd=`pwd`
+	cd $folder
+	sh $DIR/migrate_folder.sh "$home_folder_name"
+	cd $cur_pwd
 }
 
 link_library() {
@@ -509,9 +511,9 @@ install_dependencies() {
 	cd $current_pwd
 }
 
-# ===
+# ===============================
 # FUTURE: SUPPORT MULTIPLE PARAMS
-# ===
+# ===============================
 get_params() {
 	while test $# -gt 0; do
         case "$1" in
@@ -532,15 +534,15 @@ get_params() {
 setup_folder() {	
 	m_CurrentStep=0
 	generate_folders "$@"
-	create_package "$@"
-	create_code_templates "$@"
-	create_webpack_config "$@"
-	create_babel_config "$@"
-	create_ts_config "$@"
-	create_index_html "$@"
+	# create_package "$@"
+	# create_code_templates "$@"
+	# create_webpack_config "$@"
+	# create_babel_config "$@"
+	# create_ts_config "$@"
+	# create_index_html "$@"
 	symlink_node_modules "$@"
-	install_dependencies "$@"
-	create_jest_config "$@"
+	# install_dependencies "$@"
+	# create_jest_config "$@"
 }
 
 main() {

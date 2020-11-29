@@ -23,7 +23,7 @@ do_symlink() {
     echo " -- to $root_folder/node_modules"
 
     # create the npm folder
-    mkdir -p $npm_path
+    mkdir -p $npm_path/
 
     # copy over the original node_modules folder, preserving the symlinks, then delete the original
     cp -RP $root_folder/node_modules $npm_path/node_modules
@@ -43,13 +43,13 @@ main() {
     # first input will be the npm source location
     local npm_folder=$1
 
-    # third input will be the -r flag
+    # second input will be the -r flag
     local recursive=0
     if [ "-r" = "$2" ]; then
         recursive=1
     fi
 
-    do_symlink $npm_folder $npm_folder
+    do_symlink $npm_folder $root_folder
 
     # recursive loops will be done in the case of lerna, so 
     if [[ recursive -eq 1 ]]; then
