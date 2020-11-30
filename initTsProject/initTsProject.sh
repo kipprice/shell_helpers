@@ -534,15 +534,15 @@ get_params() {
 setup_folder() {	
 	m_CurrentStep=0
 	generate_folders "$@"
-	# create_package "$@"
-	# create_code_templates "$@"
-	# create_webpack_config "$@"
-	# create_babel_config "$@"
-	# create_ts_config "$@"
-	# create_index_html "$@"
+	create_package "$@"
+	create_code_templates "$@"
+	create_webpack_config "$@"
+	create_babel_config "$@"
+	create_ts_config "$@"
+	create_index_html "$@"
 	symlink_node_modules "$@"
-	# install_dependencies "$@"
-	# create_jest_config "$@"
+	install_dependencies "$@"
+	create_jest_config "$@"
 }
 
 main() {
